@@ -13,7 +13,7 @@
   var BASE = "./";
   if (scriptEl && scriptEl.src) BASE = scriptEl.src.replace(/app\.js(\?.*)?$/, "");
 
-  var CATALOG_URL = BASE + "catalog-public.json?v=7";
+  var CATALOG_URL = BASE + "catalog-public.json?v=8";
   var data = { cats: [], families: [], skus: [] };
   var famById = {};
   var skuById = {};
@@ -480,6 +480,15 @@
           if (hay.indexOf(queries[qi]) >= 0) {
             rank = 2;
             break;
+          }
+          var toks = queries[qi].split(/\s+/).filter(function (t) { return t.length >= 2; });
+          if (toks.length >= 2) {
+            var all = true;
+            for (var ti = 0; ti < toks.length; ti++) if (hay.indexOf(toks[ti]) < 0) all = false;
+            if (all) {
+              rank = 2;
+              break;
+            }
           }
         }
       }
