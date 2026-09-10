@@ -7,24 +7,27 @@
   <meta http-equiv="Cache-Control" content="no-cache">
   <title>АВТОЭЛЕКТРОНИКА B2B</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <header class="top">
-    <button id="logoBtn" class="brand" type="button">
-      <span class="mark">AE69</span>
+    <button id="logoBtn" class="brand" type="button" aria-label="На главную">
+      <span class="mark">AE<br>69</span>
       <span>
         <b>АВТОЭЛЕКТРОНИКА</b>
-        <small id="meta">Загрузка базы…</small>
+        <small id="meta">Тверь · каталог</small>
       </span>
     </button>
     <a class="phone" href="tel:+74822559777">(4822) 559-777</a>
   </header>
+  <div class="head-search">
+    <input class="search" id="headQ" placeholder="Код АЭ, артикул, ПГВА 0,75" autocapitalize="off" enterkeyhint="search">
+  </div>
   <nav class="tabs">
     <button class="tab on" data-view="home" type="button">Главная</button>
     <button class="tab" data-view="catalog" type="button">Каталог</button>
-    <button class="tab" data-view="search" type="button">Поиск</button>
     <button class="tab" data-view="cart" type="button">Корзина <span id="cartN"></span></button>
+    <button class="tab" data-view="cabinet" type="button">Кабинет</button>
   </nav>
   <main id="app"><p class="muted" style="padding:16px">Загружаю каталог…</p></main>
   <script>
@@ -33,6 +36,6 @@
     if (el) el.innerHTML = "<p style=\"padding:16px;color:#a11\">Ошибка страницы: " + m + "</p>";
   };
   </script>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
