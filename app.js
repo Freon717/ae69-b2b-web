@@ -13,7 +13,7 @@
   var BASE = "./";
   if (scriptEl && scriptEl.src) BASE = scriptEl.src.replace(/app\.js(\?.*)?$/, "");
 
-  var CATALOG_URL = BASE + "catalog-public.json?v=5";
+  var CATALOG_URL = BASE + "catalog-public.json?v=6";
   var data = { cats: [], families: [], skus: [] };
   var famById = {};
   var skuById = {};
@@ -117,6 +117,24 @@
     }
     return out;
   }
+  function orderOpts(opts, vs) {
+    if (!vs || !vs.length) return opts;
+    return opts.slice().sort(function (a, b) {
+      var ia = vs.indexOf(a);
+      var ib = vs.indexOf(b);
+      if (ia < 0) ia = 999;
+      if (ib < 0) ib = 999;
+      return ia - ib;
+    });
+  }
+  function prefixSel(fam, upto) {
+    var prefix = {};
+    for (var i = 0; i < upto; i++) {
+      var k = fam.sels[i].k;
+      if (selected[k]) prefix[k] = selected[k];
+    }
+    return prefix;
+  }
   function resolveUnique(items, sel) {
     var matched = [];
     for (var i = 0; i < items.length; i++) {
@@ -187,7 +205,7 @@
     if (!fam.sels || !fam.sels.length) return;
     for (var i = 0; i < fam.sels.length; i++) {
       var key = fam.sels[i].k;
-      var opts = availableOptions(items, selected, key);
+      var opts = orderOpts(availableOptions(items, selected, key), fam.sels[i].vs);
       if (opts.length) selected[key] = opts[0];
     }
   }
@@ -196,10 +214,11 @@
     if (!fam) return crumbs() + "<p>Не найдено</p>";
     var items = famSkus(fam.id);
     if (!Object.keys(selected).length) initSelected(fam, items);
-    var i, sel, opts, v, on;
+    var i, sel, opts, v, on, prefix;
     for (i = 0; i < (fam.sels || []).length; i++) {
       sel = fam.sels[i];
-      opts = availableOptions(items, selected, sel.k);
+      prefix = prefixSel(fam, i);
+      opts = orderOpts(availableOptions(items, prefix, sel.k), sel.vs);
       if (selected[sel.k] && opts.indexOf(selected[sel.k]) < 0) selected[sel.k] = opts[0] || "";
     }
     var sku = fam.sels && fam.sels.length ? resolveUnique(items, selected) : items[0] || null;
@@ -210,7 +229,8 @@
     if (fam.own) html += "<div class=\"muted\">Своё производство</div>";
     for (i = 0; i < (fam.sels || []).length; i++) {
       sel = fam.sels[i];
-      opts = availableOptions(items, selected, sel.k);
+      prefix = prefixSel(fam, i);
+      opts = orderOpts(availableOptions(items, prefix, sel.k), sel.vs);
       html += "<div class=\"muted\" style=\"margin-top:12px\">" + esc(sel.l) + "</div><div class=\"chips\">";
       for (var j = 0; j < opts.length; j++) {
         v = opts[j];
@@ -376,7 +396,7 @@
               var items = famSkus(fam.id);
               for (i = idx + 1; i < fam.sels.length; i++) {
                 k = fam.sels[i].k;
-                opts = availableOptions(items, selected, k);
+                opts = orderOpts(availableOptions(items, selected, k), fam.sels[i].vs);
                 if (opts.length) selected[k] = opts[0];
               }
             }
