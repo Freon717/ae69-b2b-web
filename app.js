@@ -1,153 +1,205 @@
-const JSON_URLS = [
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&")
+    .replace(/</g, "<")
+    .replace(/>/g, ">")
+    .replace(/"/g, """);
+}
+
+var JSON_URLS = [
   "https://cdn.jsdelivr.net/gh/Freon717/ae69-catalog-data@main/catalog.json",
-  "https://raw.githubusercontent.com/Freon717/ae69-catalog-data/main/catalog.json",
-  "catalog.json"
+  "https://raw.githubusercontent.com/Freon717/ae69-catalog-data/main/catalog.json"
 ];
-const HIDDEN = new Set(["413","5459","5752","789","985","5781","4199","5782"]);
-const money = n => n == null || n === "" ? "цена в заявке" : new Intl.NumberFormat("ru-RU",{style:"currency",currency:"RUB"}).format(n);
+var HIDDEN = { "413": 1, "5459": 1, "5752": 1, "789": 1, "985": 1, "5781": 1, "4199": 1, "5782": 1 };
 
-let products = [];
-let view = {name:"home"};
-let cart = JSON.parse(localStorage.getItem("ae69-b2b-web-cart")||"[]");
-let status = "Загрузка базы…";
+var products = [];
+var view = { name: "home" };
+var status = "Загрузка базы…";
+var cart = [];
+try {
+  cart = JSON.parse(localStorage.getItem("ae69-b2b-web-cart") || "[]") || [];
+} catch (e) {
+  cart = [];
+}
 
-function saveCart(){ localStorage.setItem("ae69-b2b-web-cart", JSON.stringify(cart)); }
-function norm(s){ return String(s||"").toLowerCase().replace(/ё/g,"е").replace(/,/g,"."); }
-
-function categories(){
-  const map = new Map();
-  for (const p of products) {
-    const name = p.h || "Без категории";
-    const rec = map.get(name) || {name, count:0};
-    rec.count++;
-    map.set(name, rec);
+function saveCart() {
+  localStorage.setItem("ae69-b2b-web-cart", JSON.stringify(cart));
+}
+function norm(s) {
+  return String(s || "").toLowerCase().replace(/ё/g, "е").replace(/,/g, ".");
+}
+function categories() {
+  var map = {};
+  var order = [];
+  for (var i = 0; i < products.length; i++) {
+    var name = products[i].h || "Без категории";
+    if (!map[name]) {
+      map[name] = { name: name, count: 0 };
+      order.push(map[name]);
+    }
+    map[name].count++;
   }
-  return [...map.values()].sort((a,b)=>a.name.localeCompare(b.name,"ru"));
+  order.sort(function (a, b) { return a.name.localeCompare(b.name, "ru"); });
+  return order;
 }
-function inCat(name){ return products.filter(p => (p.h||"Без категории")===name); }
-function findCode(code){ return products.find(p => String(p.c)===String(code)); }
-
-function setView(v){ view=v; render(); }
-function nav(name){
-  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on", b.dataset.view===name));
-  if(name==="home") setView({name:"home"});
-  if(name==="catalog") setView({name:"catalog"});
-  if(name==="search") setView({name:"search", q: view.q||""});
-  if(name==="cart") setView({name:"cart"});
+function inCat(name) {
+  var out = [];
+  for (var i = 0; i < products.length; i++) {
+    if ((products[i].h || "Без категории") === name) out.push(products[i]);
+  }
+  return out;
 }
-
-function crumbs(extra){
-  return `<div class="crumbs"><a href="#" class="js-home">Главная</a> / <a href="#" class="js-catalog">Каталог</a>${extra||""}</div>`;
+function findCode(code) {
+  code = String(code);
+  for (var i = 0; i < products.length; i++) if (String(products[i].c) === code) return products[i];
+  return null;
 }
-function rowProduct(p){
-  return `<button class="row js-item" data-code="${p.c}"><div><h2>${esc(p.n)}</h2><div class="muted">Код АЭ ${p.c}${p.a?" · "+esc(p.a):""}</div></div><span class="muted">→</span></button>`;
+function setView(v) {
+  view = v;
+  render();
 }
-function esc(s){ return String(s||"").replace(/[&<>"]/g, c=>({"&":"&","<":"<",">":">","\"":"""}[c])); }
-
-function home(){
-  const cats = categories();
-  return `<h1>Оптовый каталог</h1>
-    <p class="muted">${esc(status)}. Поиск по коду АЭ, артикулу, ПГВА, 0,75.</p>
-    ${cats.map(c=>`<button class="row js-cat" data-name="${esc(c.name)}"><div><h2>${esc(c.name)}</h2><div class="muted">${c.count} поз.</div></div><span class="muted">→</span></button>`).join("")}`;
+function nav(name) {
+  var tabs = document.querySelectorAll(".tab");
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-view") === name);
+  if (name === "home") setView({ name: "home" });
+  if (name === "catalog") setView({ name: "catalog" });
+  if (name === "search") setView({ name: "search", q: view.q || "" });
+  if (name === "cart") setView({ name: "cart" });
 }
-function catalog(){
-  return `<h1>Каталог</h1>` + categories().map(c=>`<button class="row js-cat" data-name="${esc(c.name)}"><h2>${esc(c.name)}</h2><span class="muted">${c.count}</span></button>`).join("");
+function crumbs(extra) {
+  return "<div class=\"crumbs\"><a href=\"#\" class=\"js-home\">Главная</a> / <a href=\"#\" class=\"js-catalog\">Каталог</a>" + (extra || "") + "</div>";
 }
-function category(){
-  const list = inCat(view.cat);
-  return `${crumbs(" / "+esc(view.cat))}<h1>${esc(view.cat)}</h1><p class="muted">${list.length} позиций</p>${list.map(rowProduct).join("")}`;
+function rowProduct(p) {
+  return "<button class=\"row js-item\" type=\"button\" data-code=\"" + esc(p.c) + "\"><div><h2>" + esc(p.n) + "</h2><div class=\"muted\">Код АЭ " + esc(p.c) + (p.a ? " · " + esc(p.a) : "") + "</div></div><span class=\"muted\">→</span></button>";
 }
-function product(){
-  const p = findCode(view.code);
-  if(!p) return `${crumbs()}<p>Код ${esc(view.code)} не найден</p>`;
-  const photo = (p.p&&p.p[0]) ? `<img src="${esc(p.p[0])}" alt="" style="width:100%;max-height:220px;object-fit:contain;background:#fff;border-radius:10px">` : "";
-  const line = cart.find(x=>x.skuId===String(p.c));
-  return `${crumbs(" / "+esc(p.h||""))}
-    ${photo}
-    <h1>${esc(p.n)}</h1>
-    <div class="card">
-      <div class="muted">Код АЭ ${p.c}${p.a?" · "+esc(p.a):""}</div>
-      <div class="price" style="font-size:22px;margin:8px 0">${money(p.wholesale)}</div>
-      ${line?stepper(String(p.c), line.qty):`<button class="btn js-add" data-code="${p.c}">В корзину</button>`}
-    </div>
-    <p class="muted">Фото с ae69.ru, если есть. Остатки не показываем.</p>`;
+function homeHtml() {
+  var cats = categories();
+  var html = "<h1>Каталог</h1><p class=\"muted\">" + esc(status) + "</p>";
+  for (var i = 0; i < cats.length; i++) {
+    html += "<button class=\"row js-cat\" type=\"button\" data-name=\"" + esc(cats[i].name) + "\"><div><h2>" + esc(cats[i].name) + "</h2><div class=\"muted\">" + cats[i].count + " поз.</div></div><span class=\"muted\">→</span></button>";
+  }
+  if (!cats.length) html += "<p class=\"muted\">Если список пуст — обновите страницу. База качается с GitHub.</p>";
+  return html;
 }
-function stepper(id,qty){ return `<div class="step"><button class="js-qty" data-id="${id}" data-d="-1">−</button><span>${qty}</span><button class="js-qty" data-id="${id}" data-d="1">+</button></div>`; }
-function search(){
-  const q = norm(view.q||"");
-  const hits = !q ? [] : products.filter(p => norm(p.c+" "+p.a+" "+p.n+" "+(p.s||"")).includes(q)).slice(0,80);
-  return `<h1>Поиск</h1><input class="search" id="q" value="${esc(view.q||"")}" placeholder="7021, ПГВА 0,75">
-    <p class="muted">${q?hits.length+" из "+products.length:"Введите код или название"}</p>
-    ${hits.map(rowProduct).join("")}`;
+function searchHtml() {
+  var q = norm(view.q || "");
+  var html = "<h1>Поиск</h1><input class=\"search\" id=\"q\" value=\"" + esc(view.q || "") + "\" placeholder=\"7021, ПГВА 0,75\">";
+  if (!q) return html + "<p class=\"muted\">Введите код АЭ или название</p>";
+  var n = 0;
+  for (var i = 0; i < products.length && n < 80; i++) {
+    var p = products[i];
+    var hay = norm(p.c + " " + (p.a || "") + " " + (p.n || ""));
+    if (hay.indexOf(q) < 0) continue;
+    html += rowProduct(p);
+    n++;
+  }
+  return html + "<p class=\"muted\">Найдено " + n + "</p>";
 }
-function cartView(){
-  if(!cart.length) return `<h1>Корзина</h1><p class="muted">Пока пусто. Найдите 7021 или ПГВА.</p>`;
-  return `<h1>Корзина</h1><button class="btn sec js-csv">Скачать CSV</button>
-    ${cart.map(i=>`<div class="card"><div class="muted">${esc(i.code)} · ${esc(i.article)}</div><div>${esc(i.name)}</div><div style="display:flex;justify-content:space-between;margin-top:8px">${stepper(i.skuId,i.qty)}<button class="btn sec js-del" data-id="${i.skuId}">Удалить</button></div></div>`).join("")}`;
+function itemHtml() {
+  var p = findCode(view.code);
+  if (!p) return crumbs() + "<p>Не найден</p>";
+  var photo = p.p && p.p[0] ? "<img src=\"" + esc(p.p[0]) + "\" alt=\"\" style=\"width:100%;max-height:220px;object-fit:contain;background:#fff;border-radius:10px\">" : "";
+  return crumbs(" / " + esc(p.h || "")) + photo + "<h1>" + esc(p.n) + "</h1><div class=\"card\"><div class=\"muted\">Код АЭ " + esc(p.c) + (p.a ? " · " + esc(p.a) : "") + "</div><p class=\"muted\">Оптовая цена в полном B2B, здесь база справочника.</p><button class=\"btn js-add\" type=\"button\" data-code=\"" + esc(p.c) + "\">В корзину</button></div>";
 }
-
-function render(){
-  const n = document.getElementById("cartN"); if(n) n.textContent = cart.length||"";
-  const meta = document.getElementById("meta"); if(meta) meta.textContent = status;
-  const el = document.getElementById("app");
-  if(!el) return;
-  if(view.name==="home") el.innerHTML = home();
-  else if(view.name==="catalog") el.innerHTML = catalog();
-  else if(view.name==="cat") el.innerHTML = category();
-  else if(view.name==="item") el.innerHTML = product();
-  else if(view.name==="search") el.innerHTML = search();
-  else if(view.name==="cart") el.innerHTML = cartView();
+function cartHtml() {
+  if (!cart.length) return "<h1>Корзина</h1><p class=\"muted\">Пока пусто</p>";
+  var html = "<h1>Корзина</h1>";
+  for (var i = 0; i < cart.length; i++) {
+    html += "<div class=\"card\"><div class=\"muted\">" + esc(cart[i].code) + "</div><div>" + esc(cart[i].name) + "</div><div>× " + cart[i].qty + "</div></div>";
+  }
+  return html;
+}
+function render() {
+  var el = document.getElementById("app");
+  var meta = document.getElementById("meta");
+  var cn = document.getElementById("cartN");
+  if (meta) meta.textContent = status;
+  if (cn) cn.textContent = cart.length ? String(cart.length) : "";
+  if (!el) return;
+  try {
+    if (view.name === "home" || view.name === "catalog") el.innerHTML = homeHtml();
+    else if (view.name === "cat") {
+      var list = inCat(view.cat);
+      var html = crumbs(" / " + esc(view.cat)) + "<h1>" + esc(view.cat) + "</h1><p class=\"muted\">" + list.length + " поз.</p>";
+      for (var i = 0; i < list.length; i++) html += rowProduct(list[i]);
+      el.innerHTML = html;
+    } else if (view.name === "item") el.innerHTML = itemHtml();
+    else if (view.name === "search") el.innerHTML = searchHtml();
+    else if (view.name === "cart") el.innerHTML = cartHtml();
+  } catch (e) {
+    el.innerHTML = "<p style=\"padding:16px;color:#a11\">" + esc(e.message) + "</p>";
+    return;
+  }
   bind();
 }
-function bind(){
-  document.querySelectorAll(".js-home").forEach(b=>b.onclick=e=>{e.preventDefault();nav("home");});
-  document.querySelectorAll(".js-catalog").forEach(b=>b.onclick=e=>{e.preventDefault();nav("catalog");});
-  document.querySelectorAll(".js-cat").forEach(b=>b.onclick=()=>setView({name:"cat",cat:b.dataset.name}));
-  document.querySelectorAll(".js-item").forEach(b=>b.onclick=()=>setView({name:"item",code:b.dataset.code}));
-  document.querySelectorAll(".js-add").forEach(b=>b.onclick=()=>{
-    const p=findCode(b.dataset.code); if(!p) return;
-    const i=cart.find(x=>x.skuId===String(p.c));
-    if(i) i.qty++; else cart.push({skuId:String(p.c),code:String(p.c),article:p.a||"",name:p.n,qty:1});
-    saveCart(); render();
+function bind() {
+  function on(sel, fn) {
+    var nodes = document.querySelectorAll(sel);
+    for (var i = 0; i < nodes.length; i++) nodes[i].onclick = fn;
+  }
+  on(".js-home", function (e) { e.preventDefault(); nav("home"); });
+  on(".js-catalog", function (e) { e.preventDefault(); nav("catalog"); });
+  on(".js-cat", function () { setView({ name: "cat", cat: this.getAttribute("data-name") }); });
+  on(".js-item", function () { setView({ name: "item", code: this.getAttribute("data-code") }); });
+  on(".js-add", function () {
+    var p = findCode(this.getAttribute("data-code"));
+    if (!p) return;
+    cart.push({ skuId: String(p.c), code: String(p.c), article: p.a || "", name: p.n, qty: 1 });
+    saveCart();
+    render();
   });
-  document.querySelectorAll(".js-qty").forEach(b=>b.onclick=()=>{
-    const i=cart.find(x=>x.skuId===b.dataset.id); if(!i) return;
-    i.qty += Number(b.dataset.d); if(i.qty<=0) cart=cart.filter(x=>x.skuId!==i.skuId);
-    saveCart(); render();
-  });
-  document.querySelectorAll(".js-del").forEach(b=>b.onclick=()=>{ cart=cart.filter(x=>x.skuId!==b.dataset.id); saveCart(); render(); });
-  document.querySelectorAll(".js-csv").forEach(b=>b.onclick=()=>{
-    const rows=[["Код АЭ","Артикул","Наименование","Кол-во"],...cart.map(i=>[i.code,i.article,i.name,i.qty])];
-    const csv="\uFEFF"+rows.map(r=>r.map(x=>`"${x}"`).join(";")).join("\n");
-    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="zayavka-ae69.csv"; a.click();
-  });
-  const q=document.getElementById("q");
-  if(q){ q.oninput=()=>{ view.q=q.value; const pos=q.selectionStart; render(); const nq=document.getElementById("q"); if(nq){ nq.focus(); nq.setSelectionRange(pos,pos);} }; }
+  var q = document.getElementById("q");
+  if (q) {
+    q.oninput = function () {
+      view.q = q.value;
+      var pos = q.selectionStart;
+      render();
+      var nq = document.getElementById("q");
+      if (nq) { nq.focus(); nq.setSelectionRange(pos, pos); }
+    };
+  }
 }
-
-async function load(){
-  let last;
-  for (const url of JSON_URLS) {
-    try {
-      const res = await fetch(url, {cache:"no-store"});
-      if(!res.ok) throw new Error(res.status);
-      const data = await res.json();
-      const list = data.products || data.skus || [];
-      products = list.filter(p => !HIDDEN.has(String(p.c || p.ae69Code)));
-      if (products[0] && products[0].ae69Code) {
-        products = products.map(s => ({c:s.ae69Code,a:s.article,n:s.name,h:s.categoryId,s:s.search,wholesale:s.wholesale,p:[]}));
-      }
-      status = products.length + " поз. · база справочника";
+function applyPayload(data) {
+  var list = data.products || data.skus || [];
+  var out = [];
+  for (var i = 0; i < list.length; i++) {
+    var raw = list[i];
+    var code = String(raw.c || raw.ae69Code || "");
+    if (!code || HIDDEN[code]) continue;
+    out.push({
+      c: code,
+      a: raw.a || raw.article || "",
+      n: raw.n || raw.name || "",
+      h: raw.h || raw.categoryName || raw.categoryId || "Без категории",
+      p: raw.p || []
+    });
+  }
+  products = out;
+  status = products.length + " позиций";
+  render();
+}
+function load() {
+  var i = 0;
+  function next() {
+    if (i >= JSON_URLS.length) {
+      status = "Не удалось скачать базу. Проверьте сеть.";
       render();
       return;
-    } catch (e) { last = e; }
+    }
+    var url = JSON_URLS[i++];
+    fetch(url, { cache: "no-store" }).then(function (res) {
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    }).then(applyPayload).catch(next);
   }
-  status = "Не удалось скачать базу";
-  render();
-  console.error(last);
+  next();
 }
 
-document.getElementById("logoBtn").onclick = () => nav("home");
-document.querySelectorAll(".tab").forEach(b => b.onclick = () => nav(b.dataset.view));
+var logo = document.getElementById("logoBtn");
+if (logo) logo.onclick = function () { nav("home"); };
+var tabs = document.querySelectorAll(".tab");
+for (var t = 0; t < tabs.length; t++) {
+  tabs[t].onclick = function () { nav(this.getAttribute("data-view")); };
+}
 render();
 load();
