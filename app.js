@@ -1,155 +1,153 @@
+const JSON_URLS = [
+  "https://cdn.jsdelivr.net/gh/Freon717/ae69-catalog-data@main/catalog.json",
+  "https://raw.githubusercontent.com/Freon717/ae69-catalog-data/main/catalog.json",
+  "catalog.json"
+];
 const HIDDEN = new Set(["413","5459","5752","789","985","5781","4199","5782"]);
-const money = n => n == null ? "—" : new Intl.NumberFormat("ru-RU",{style:"currency",currency:"RUB"}).format(n);
-const DEMO = {
-  sourceDate: "демо для браузера",
-  categories: [
-    {id:"wires",name:"Провода и кабели",subs:["pgva","kgvva","amg"]},
-    {id:"connectors",name:"Автомобильные разъёмы и колодки",subs:["housings"]},
-    {id:"protection",name:"Защита и изоляция проводки",subs:["corrugated_tubes"]}
-  ],
-  families: [
-    {id:"wire-pgva",title:"Провод автомобильный ПГВА",categoryId:"wires",subId:"pgva",own:true,
-      selectors:[{key:"section",label:"Сечение"},{key:"length",label:"Длина"},{key:"color",label:"Цвет"}]},
-    {id:"wire-pgva-rainbow",title:"Набор проводов ПГВА «Радуга»",categoryId:"wires",subId:"pgva",own:true,selectors:[]},
-    {id:"wire-kgvva",title:"Кабель автомобильный КГВВА",categoryId:"wires",subId:"kgvva",own:true,
-      selectors:[{key:"section",label:"Сечение"},{key:"cores",label:"Жилы"},{key:"length",label:"Длина"}]},
-    {id:"wire-amg",title:"Провод массы АМГ",categoryId:"wires",subId:"amg",own:true,
-      selectors:[{key:"section",label:"Сечение"},{key:"length",label:"Длина"}]},
-    {id:"col-6",title:"Колодка 6-контактная",categoryId:"connectors",subId:"housings",own:true,
-      selectors:[{key:"kit",label:"Комплектация"}]},
-    {id:"gofra",title:"Гофротрубка автомобильная",categoryId:"protection",subId:"corrugated_tubes",own:false,
-      selectors:[{key:"class",label:"Класс"},{key:"split",label:"Исполнение"},{key:"diameter",label:"Диаметр"}]}
-  ],
-  skus: [
-    sku("6886","7021","ПГВА 0,75 красный 5 м","wire-pgva",65.98,{section:"0,75 мм²",length:"Отрезок 5 м",color:"красный"}),
-    sku("6887","7021-10","ПГВА 0,75 чёрный 5 м","wire-pgva",65.98,{section:"0,75 мм²",length:"Отрезок 5 м",color:"чёрный"}),
-    sku("6888","7021-50","ПГВА 0,75 красный бухта 50 м","wire-pgva",489.0,{section:"0,75 мм²",length:"Бухта 50 м",color:"красный"}),
-    sku("6901","7060","ПГВА 6,00 красный 5 м","wire-pgva",214.0,{section:"6,00 мм²",length:"Отрезок 5 м",color:"красный"}),
-    sku("6902","7060-10","ПГВА 6,00 чёрный 5 м","wire-pgva",214.0,{section:"6,00 мм²",length:"Отрезок 5 м",color:"чёрный"}),
-    sku("6903","7060-10m","ПГВА 6,00 красный 10 м","wire-pgva",398.0,{section:"6,00 мм²",length:"Отрезок 10 м",color:"красный"}),
-    sku("6999","7021-R","ПГВА «Радуга»","wire-pgva-rainbow",890,{}),
-    sku("7101","КГ-2x1.5","КГВВА 2x1,50 5 м","wire-kgvva",312,{section:"1,50 мм²",cores:"2",length:"Отрезок 5 м"}),
-    sku("7102","КГ-3x1.5","КГВВА 3x1,50 5 м","wire-kgvva",401,{section:"1,50 мм²",cores:"3",length:"Отрезок 5 м"}),
-    sku("7201","АМГ-16","АМГ 16 мм²","wire-amg",155,{section:"16,00 мм²",length:"Нарезка от 1 м"}),
-    sku("801","4171","Колодка 6к голая","col-6",42,{kit:"Голая"}),
-    sku("802","4171-сб","Колодка 6к с проводом","col-6",118,{kit:"С проводом"}),
-    sku("901","GF-B-R","Гофра B разрезная 10 мм","gofra",76,{class:"B",split:"Разрезная",diameter:"10 мм"}),
-    sku("902","GF-B-N","Гофра B неразрезная 10 мм","gofra",81,{class:"B",split:"Неразрезная",diameter:"10 мм"}),
-    sku("903","GF-E-R","Гофра E разрезная 10 мм","gofra",94,{class:"E",split:"Разрезная",diameter:"10 мм"})
-  ]
-};
-function sku(id,art,name,familyId,price,attrs){
-  return {id,ae69Code:id,article:art,name,familyId,wholesale:price,packQty:1,orderMultiple:1,minOrderQty:1,unit:"шт",ownProduction:true,attrs};
-}
-let CATALOG = DEMO;
+const money = n => n == null || n === "" ? "цена в заявке" : new Intl.NumberFormat("ru-RU",{style:"currency",currency:"RUB"}).format(n);
+
+let products = [];
 let view = {name:"home"};
 let cart = JSON.parse(localStorage.getItem("ae69-b2b-web-cart")||"[]");
-function saveCart(){localStorage.setItem("ae69-b2b-web-cart",JSON.stringify(cart));}
-function familiesOf(cat,sub){return CATALOG.families.filter(f=>f.categoryId===cat && (!sub||f.subId===sub));}
-function skusOf(fid){return CATALOG.skus.filter(s=>s.familyId===fid && !HIDDEN.has(s.ae69Code));}
-function available(skus,selected,key){
-  const others=Object.entries(selected).filter(([k,v])=>k!==key&&v);
-  const pool=skus.filter(s=>others.every(([k,v])=>String(s.attrs[k]||"")===v));
-  return [...new Set(pool.map(s=>String(s.attrs[key]||"")).filter(Boolean))];
+let status = "Загрузка базы…";
+
+function saveCart(){ localStorage.setItem("ae69-b2b-web-cart", JSON.stringify(cart)); }
+function norm(s){ return String(s||"").toLowerCase().replace(/ё/g,"е").replace(/,/g,"."); }
+
+function categories(){
+  const map = new Map();
+  for (const p of products) {
+    const name = p.h || "Без категории";
+    const rec = map.get(name) || {name, count:0};
+    rec.count++;
+    map.set(name, rec);
+  }
+  return [...map.values()].sort((a,b)=>a.name.localeCompare(b.name,"ru"));
 }
-function resolve(skus,selected){
-  const hit=skus.filter(s=>Object.entries(selected).every(([k,v])=>!v||String(s.attrs[k]||"")===v));
-  return hit.length===1?hit[0]:undefined;
-}
-function setView(v){view=v;render();}
+function inCat(name){ return products.filter(p => (p.h||"Без категории")===name); }
+function findCode(code){ return products.find(p => String(p.c)===String(code)); }
+
+function setView(v){ view=v; render(); }
 function nav(name){
-  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.view===name));
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on", b.dataset.view===name));
   if(name==="home") setView({name:"home"});
   if(name==="catalog") setView({name:"catalog"});
-  if(name==="search") setView({name:"search",q:""});
+  if(name==="search") setView({name:"search", q: view.q||""});
   if(name==="cart") setView({name:"cart"});
 }
+
+function crumbs(extra){
+  return `<div class="crumbs"><a href="#" class="js-home">Главная</a> / <a href="#" class="js-catalog">Каталог</a>${extra||""}</div>`;
+}
+function rowProduct(p){
+  return `<button class="row js-item" data-code="${p.c}"><div><h2>${esc(p.n)}</h2><div class="muted">Код АЭ ${p.c}${p.a?" · "+esc(p.a):""}</div></div><span class="muted">→</span></button>`;
+}
+function esc(s){ return String(s||"").replace(/[&<>"]/g, c=>({"&":"&","<":"<",">":">","\"":"""}[c])); }
+
+function home(){
+  const cats = categories();
+  return `<h1>Оптовый каталог</h1>
+    <p class="muted">${esc(status)}. Поиск по коду АЭ, артикулу, ПГВА, 0,75.</p>
+    ${cats.map(c=>`<button class="row js-cat" data-name="${esc(c.name)}"><div><h2>${esc(c.name)}</h2><div class="muted">${c.count} поз.</div></div><span class="muted">→</span></button>`).join("")}`;
+}
+function catalog(){
+  return `<h1>Каталог</h1>` + categories().map(c=>`<button class="row js-cat" data-name="${esc(c.name)}"><h2>${esc(c.name)}</h2><span class="muted">${c.count}</span></button>`).join("");
+}
+function category(){
+  const list = inCat(view.cat);
+  return `${crumbs(" / "+esc(view.cat))}<h1>${esc(view.cat)}</h1><p class="muted">${list.length} позиций</p>${list.map(rowProduct).join("")}`;
+}
+function product(){
+  const p = findCode(view.code);
+  if(!p) return `${crumbs()}<p>Код ${esc(view.code)} не найден</p>`;
+  const photo = (p.p&&p.p[0]) ? `<img src="${esc(p.p[0])}" alt="" style="width:100%;max-height:220px;object-fit:contain;background:#fff;border-radius:10px">` : "";
+  const line = cart.find(x=>x.skuId===String(p.c));
+  return `${crumbs(" / "+esc(p.h||""))}
+    ${photo}
+    <h1>${esc(p.n)}</h1>
+    <div class="card">
+      <div class="muted">Код АЭ ${p.c}${p.a?" · "+esc(p.a):""}</div>
+      <div class="price" style="font-size:22px;margin:8px 0">${money(p.wholesale)}</div>
+      ${line?stepper(String(p.c), line.qty):`<button class="btn js-add" data-code="${p.c}">В корзину</button>`}
+    </div>
+    <p class="muted">Фото с ae69.ru, если есть. Остатки не показываем.</p>`;
+}
+function stepper(id,qty){ return `<div class="step"><button class="js-qty" data-id="${id}" data-d="-1">−</button><span>${qty}</span><button class="js-qty" data-id="${id}" data-d="1">+</button></div>`; }
+function search(){
+  const q = norm(view.q||"");
+  const hits = !q ? [] : products.filter(p => norm(p.c+" "+p.a+" "+p.n+" "+(p.s||"")).includes(q)).slice(0,80);
+  return `<h1>Поиск</h1><input class="search" id="q" value="${esc(view.q||"")}" placeholder="7021, ПГВА 0,75">
+    <p class="muted">${q?hits.length+" из "+products.length:"Введите код или название"}</p>
+    ${hits.map(rowProduct).join("")}`;
+}
+function cartView(){
+  if(!cart.length) return `<h1>Корзина</h1><p class="muted">Пока пусто. Найдите 7021 или ПГВА.</p>`;
+  return `<h1>Корзина</h1><button class="btn sec js-csv">Скачать CSV</button>
+    ${cart.map(i=>`<div class="card"><div class="muted">${esc(i.code)} · ${esc(i.article)}</div><div>${esc(i.name)}</div><div style="display:flex;justify-content:space-between;margin-top:8px">${stepper(i.skuId,i.qty)}<button class="btn sec js-del" data-id="${i.skuId}">Удалить</button></div></div>`).join("")}`;
+}
+
 function render(){
-  document.getElementById("cartN").textContent = cart.length?cart.length:"";
-  const el=document.getElementById("app");
+  const n = document.getElementById("cartN"); if(n) n.textContent = cart.length||"";
+  const meta = document.getElementById("meta"); if(meta) meta.textContent = status;
+  const el = document.getElementById("app");
+  if(!el) return;
   if(view.name==="home") el.innerHTML = home();
   else if(view.name==="catalog") el.innerHTML = catalog();
   else if(view.name==="cat") el.innerHTML = category();
-  else if(view.name==="family") el.innerHTML = family();
+  else if(view.name==="item") el.innerHTML = product();
   else if(view.name==="search") el.innerHTML = search();
   else if(view.name==="cart") el.innerHTML = cartView();
   bind();
 }
-function home(){
-  return `<h1>Оптовый каталог</h1>
-    <p class="muted">То же, что в APK, только в браузере. Сейчас: ${CATALOG.sourceDate}. Остатки не показываем.</p>
-    ${CATALOG.categories.map(c=>`<button class="row js-cat" data-id="${c.id}"><div><h2>${c.name}</h2><div class="muted">${familiesOf(c.id).length} семейств</div></div><span class="muted">→</span></button>`).join("")}`;
-}
-function catalog(){
-  return `<h1>Каталог</h1>` + CATALOG.categories.map(c=>`<button class="row js-cat" data-id="${c.id}"><h2>${c.name}</h2><span class="muted">→</span></button>`).join("");
-}
-function category(){
-  const c=CATALOG.categories.find(x=>x.id===view.id);
-  const list=familiesOf(view.id);
-  return `<div class="crumbs"><a href="#" class="js-home">Главная</a> / <a href="#" class="js-catalog">Каталог</a> / ${c?c.name:""}</div>
-    <h1>${c?c.name:""}</h1>
-    ${list.map(f=>{
-      const from=Math.min(...skusOf(f.id).map(s=>s.wholesale));
-      return `<button class="row js-fam" data-id="${f.id}"><div><h2>${f.title}</h2><div class="muted">${skusOf(f.id).length} вариант. ${f.own?"· своё пр-во":""}</div></div><span class="price">от ${money(from)}</span></button>`;
-    }).join("")}`;
-}
-function family(){
-  const f=CATALOG.families.find(x=>x.id===view.id);
-  if(!f) return "Нет карточки";
-  const skus=skusOf(f.id);
-  view.sel = view.sel || {};
-  f.selectors.forEach(s=>{ if(!view.sel[s.key]) view.sel[s.key]=(available(skus,view.sel,s.key)[0]||""); });
-  f.selectors.forEach(s=>{ const opts=available(skus,view.sel,s.key); if(view.sel[s.key]&&!opts.includes(view.sel[s.key])) view.sel[s.key]=opts[0]||""; });
-  const sku=f.selectors.length?resolve(skus,view.sel):skus[0];
-  const line=sku&&cart.find(x=>x.skuId===sku.id);
-  const catsel=`${f.selectors.map(s=>`<div><div class="muted">${s.label}</div><div class="chips">${available(skus,view.sel,s.key).map(v=>`<button class="chip ${view.sel[s.key]===v?"on":""} js-opt" data-k="${s.key}" data-v="${v}">${v}</button>`).join("")}</div></div>`).join("")}`;
-  const buy=sku?`<div class="card"><p>${sku.name}</p><div class="muted">Код АЭ ${sku.ae69Code} · ${sku.article}</div><div class="price" style="font-size:24px;margin:8px 0">${money(sku.wholesale)}</div>${line?stepper(line.skuId,line.qty):`<div style="display:flex;gap:8px;align-items:center"><button class="btn js-add" data-id="${sku.id}">В корзину</button></div>`}</div>`:`<p class="muted">Выберите сочетание — цена появится у конкретного SKU.</p>`;
-  return `<div class="crumbs"><a href="#" class="js-home">Главная</a> / <a href="#" class="js-catalog">Каталог</a> / ${f.title}</div><h1>${f.title}</h1>${catsel}${buy}`;
-}
-function stepper(id,qty){return `<div class="step"><button class="js-qty" data-id="${id}" data-d="-1">−</button><span>${qty}</span><button class="js-qty" data-id="${id}" data-d="1">+</button></div>`;}
-function search(){
-  const q=(view.q||"").toLowerCase().replace(",",".");
-  const hits=!q?[]:CATALOG.skus.filter(s=>`${s.ae69Code} ${s.article} ${s.name}`.toLowerCase().replace(",",".").includes(q)).slice(0,30);
-  return `<h1>Поиск</h1><input class="search" id="q" value="${view.q||""}" placeholder="7021, ПГВА 0,75, 6,3">
-    ${hits.map(s=>`<button class="row js-fam" data-id="${s.familyId}"><div><h2>${s.name}</h2><div class="muted">${s.ae69Code} · ${s.article}</div></div><span class="price">${money(s.wholesale)}</span></button>`).join("")}`;
-}
-function cartView(){
-  if(!cart.length) return `<h1>Корзина</h1><p class="muted">Пока пусто. Найдите ПГВА 6 мм² или 7021.</p>`;
-  const sum=cart.reduce((n,i)=>n+i.qty*i.price,0);
-  return `<h1>Корзина</h1><button class="btn sec js-csv">Скачать CSV</button>
-    ${cart.map(i=>`<div class="card"><div class="muted">${i.code} · ${i.article}</div><div>${i.name}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">${stepper(i.skuId,i.qty)}<b>${money(i.qty*i.price)}</b></div></div>`).join("")}
-    <div class="card"><b>Итого ${money(sum)}</b><div class="muted">Заявка, не оплата.</div></div>`;
-}
 function bind(){
-  document.querySelectorAll(".js-cat").forEach(b=>b.onclick=()=>setView({name:"cat",id:b.dataset.id}));
-  document.querySelectorAll(".js-fam").forEach(b=>b.onclick=()=>setView({name:"family",id:b.dataset.id,sel:{}}));
   document.querySelectorAll(".js-home").forEach(b=>b.onclick=e=>{e.preventDefault();nav("home");});
   document.querySelectorAll(".js-catalog").forEach(b=>b.onclick=e=>{e.preventDefault();nav("catalog");});
-  document.querySelectorAll(".js-opt").forEach(b=>b.onclick=()=>{view.sel[b.dataset.k]=b.dataset.v;render();});
+  document.querySelectorAll(".js-cat").forEach(b=>b.onclick=()=>setView({name:"cat",cat:b.dataset.name}));
+  document.querySelectorAll(".js-item").forEach(b=>b.onclick=()=>setView({name:"item",code:b.dataset.code}));
   document.querySelectorAll(".js-add").forEach(b=>b.onclick=()=>{
-    const s=CATALOG.skus.find(x=>x.id===b.dataset.id); if(!s) return;
-    const i=cart.find(x=>x.skuId===s.id);
-    if(i) i.qty+=1; else cart.push({skuId:s.id,code:s.ae69Code,article:s.article,name:s.name,qty:1,price:s.wholesale});
-    saveCart();render();
+    const p=findCode(b.dataset.code); if(!p) return;
+    const i=cart.find(x=>x.skuId===String(p.c));
+    if(i) i.qty++; else cart.push({skuId:String(p.c),code:String(p.c),article:p.a||"",name:p.n,qty:1});
+    saveCart(); render();
   });
   document.querySelectorAll(".js-qty").forEach(b=>b.onclick=()=>{
     const i=cart.find(x=>x.skuId===b.dataset.id); if(!i) return;
-    i.qty+=Number(b.dataset.d); if(i.qty<=0) cart=cart.filter(x=>x.skuId!==i.skuId);
-    saveCart();render();
+    i.qty += Number(b.dataset.d); if(i.qty<=0) cart=cart.filter(x=>x.skuId!==i.skuId);
+    saveCart(); render();
   });
+  document.querySelectorAll(".js-del").forEach(b=>b.onclick=()=>{ cart=cart.filter(x=>x.skuId!==b.dataset.id); saveCart(); render(); });
   document.querySelectorAll(".js-csv").forEach(b=>b.onclick=()=>{
-    const rows=[["Код АЭ","Артикул","Наименование","Кол-во","Цена","Сумма"],...cart.map(i=>[i.code,i.article,i.name,i.qty,i.price,i.qty*i.price])];
+    const rows=[["Код АЭ","Артикул","Наименование","Кол-во"],...cart.map(i=>[i.code,i.article,i.name,i.qty])];
     const csv="\uFEFF"+rows.map(r=>r.map(x=>`"${x}"`).join(";")).join("\n");
     const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="zayavka-ae69.csv"; a.click();
   });
   const q=document.getElementById("q");
-  if(q) q.oninput=()=>{view.q=q.value;render(); document.getElementById("q").focus(); document.getElementById("q").setSelectionRange(q.value.length,q.value.length);};
+  if(q){ q.oninput=()=>{ view.q=q.value; const pos=q.selectionStart; render(); const nq=document.getElementById("q"); if(nq){ nq.focus(); nq.setSelectionRange(pos,pos);} }; }
 }
-document.getElementById("logoBtn").onclick=()=>nav("home");
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>nav(b.dataset.view));
-fetch("catalog.json").then(r=>r.ok?r.json():null).then(j=>{
-  if(j&&j.skus){ CATALOG={sourceDate:j.source?.sourceDate||"catalog.json",categories:j.categories||DEMO.categories,families:j.families||DEMO.families,skus:j.skus.filter(s=>!HIDDEN.has(s.ae69Code))}; }
-  document.getElementById("meta").textContent=CATALOG.sourceDate;
+
+async function load(){
+  let last;
+  for (const url of JSON_URLS) {
+    try {
+      const res = await fetch(url, {cache:"no-store"});
+      if(!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      const list = data.products || data.skus || [];
+      products = list.filter(p => !HIDDEN.has(String(p.c || p.ae69Code)));
+      if (products[0] && products[0].ae69Code) {
+        products = products.map(s => ({c:s.ae69Code,a:s.article,n:s.name,h:s.categoryId,s:s.search,wholesale:s.wholesale,p:[]}));
+      }
+      status = products.length + " поз. · база справочника";
+      render();
+      return;
+    } catch (e) { last = e; }
+  }
+  status = "Не удалось скачать базу";
   render();
-}).catch(()=>render());
+  console.error(last);
+}
+
+document.getElementById("logoBtn").onclick = () => nav("home");
+document.querySelectorAll(".tab").forEach(b => b.onclick = () => nav(b.dataset.view));
 render();
+load();
