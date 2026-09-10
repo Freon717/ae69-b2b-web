@@ -13,7 +13,7 @@
   var BASE = "./";
   if (scriptEl && scriptEl.src) BASE = scriptEl.src.replace(/app\.js(\?.*)?$/, "");
 
-  var CATALOG_URL = BASE + "catalog-public.json?v=4";
+  var CATALOG_URL = BASE + "catalog-public.json?v=5";
   var data = { cats: [], families: [], skus: [] };
   var famById = {};
   var skuById = {};
@@ -365,7 +365,22 @@
       var t = ev.target;
       while (t && t !== el) {
         if (t.classList && t.classList.contains("js-facet")) {
-          selected[t.getAttribute("data-key")] = t.getAttribute("data-val");
+          var key = t.getAttribute("data-key");
+          selected[key] = t.getAttribute("data-val");
+          var fam = famById[view.id];
+          if (fam && fam.sels) {
+            var idx = -1, i, k, opts;
+            for (i = 0; i < fam.sels.length; i++) if (fam.sels[i].k === key) idx = i;
+            if (idx >= 0) {
+              for (i = idx + 1; i < fam.sels.length; i++) delete selected[fam.sels[i].k];
+              var items = famSkus(fam.id);
+              for (i = idx + 1; i < fam.sels.length; i++) {
+                k = fam.sels[i].k;
+                opts = availableOptions(items, selected, k);
+                if (opts.length) selected[k] = opts[0];
+              }
+            }
+          }
           render();
           return;
         }
