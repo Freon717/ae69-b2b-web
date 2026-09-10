@@ -13,7 +13,7 @@
   var BASE = "./";
   if (scriptEl && scriptEl.src) BASE = scriptEl.src.replace(/app\.js(\?.*)?$/, "");
 
-  var CATALOG_URL = BASE + "catalog-public.json?v=8";
+  var CATALOG_URL = BASE + "catalog-public.json?v=9";
   var data = { cats: [], families: [], skus: [] };
   var famById = {};
   var skuById = {};
@@ -208,6 +208,16 @@
     if (matched.length === 1) return matched[0];
     if (matched.length > 1) return matched[0];
     return null;
+  }
+  function coverOf(hay, queries) {
+    var best = 0, i, toks, n, t;
+    for (i = 0; i < queries.length; i++) {
+      toks = queries[i].split(/\s+/).filter(function (x) { return x.length >= 2; });
+      n = 0;
+      for (t = 0; t < toks.length; t++) if (hay.indexOf(toks[t]) >= 0) n++;
+      if (n > best) best = n;
+    }
+    return best;
   }
   function famSkus(id) {
     return skusByFam[id] || [];
@@ -494,10 +504,10 @@
       }
       if (rank === null && cq.length >= 3 && (code.indexOf(cq) >= 0 || art.indexOf(cq) >= 0)) rank = 3;
       if (rank === null) continue;
-      hits.push({ sku: s, rank: rank });
+      hits.push({ sku: s, rank: rank, cover: coverOf(hay, queries) });
     }
     hits.sort(function (a, b) {
-      return a.rank - b.rank;
+      return a.rank - b.rank || b.cover - a.cover;
     });
     var shown = 0;
     var seenFam = {};
