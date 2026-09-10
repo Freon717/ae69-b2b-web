@@ -3,17 +3,17 @@
 
   function esc(s) {
     return String(s == null ? "" : s)
-      .replace(/&/g, "&")
-      .replace(/</g, "<")
-      .replace(/>/g, ">")
-      .replace(/"/g, """);
+      .replace(/&/g, "\u0026amp;")
+      .replace(/</g, "\u0026lt;")
+      .replace(/>/g, "\u0026gt;")
+      .replace(/"/g, "\u0026quot;");
   }
 
   var scriptEl = document.querySelector("script[src*='app.js']");
   var BASE = "./";
   if (scriptEl && scriptEl.src) BASE = scriptEl.src.replace(/app\.js(\?.*)?$/, "");
 
-  var CATALOG_URL = BASE + "catalog-public.json?v=9";
+  var CATALOG_URL = BASE + "catalog-public.json?v=10";
   var data = { cats: [], families: [], skus: [] };
   var famById = {};
   var skuById = {};
