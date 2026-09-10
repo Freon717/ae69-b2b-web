@@ -1,0 +1,11 @@
+{
+  "id": "/ae69-b2b-web/",
+  "name": "AE69 B2B",
+  "short_name": "AE69 B2B",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1f4e79",
+  "theme_color": "#1f4e79",
+  "lang": "ru"
+}
