@@ -1,13 +1,20 @@
+import {
+  esc,
+  norm,
+  compact,
+  expandQ,
+  attrToken,
+  availableOptions,
+  orderOpts,
+  resolveUnique,
+  coverOf,
+  packCopy,
+  stepOf,
+  parseHash,
+} from "./lib.js?v=10";
+
 (function () {
   "use strict";
-
-  function esc(s) {
-    return String(s == null ? "" : s)
-      .replace(/&/g, "\u0026amp;")
-      .replace(/</g, "\u0026lt;")
-      .replace(/>/g, "\u0026gt;")
-      .replace(/"/g, "\u0026quot;");
-  }
 
   var scriptEl = document.querySelector("script[src*='app.js']");
   var BASE = "./";
@@ -50,41 +57,6 @@
     else favs.unshift(id);
     saveFavs();
   }
-  function norm(s) {
-    return String(s || "")
-      .toLowerCase()
-      .replace(/ё/g, "е")
-      .replace(/,/g, ".")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-  function compact(s) {
-    return norm(s).replace(/[\s.\-_/]/g, "");
-  }
-  function expandQ(raw) {
-    var q = norm(raw);
-    var out = [q];
-    var pairs = [
-      [/шестиместн[а-я]*/g, "6 конт"],
-      [/пятиместн[а-я]*/g, "5 конт"],
-      [/четырехместн[а-я]*/g, "4 конт"],
-      [/трехместн[а-я]*/g, "3 конт"],
-      [/двухместн[а-я]*/g, "2 конт"],
-      [/одноместн[а-я]*/g, "1 конт"],
-    ];
-    for (var i = 0; i < pairs.length; i++) {
-      var re = pairs[i][0];
-      var to = pairs[i][1];
-      if (re.test(q)) {
-        re.lastIndex = 0;
-        var extra = q.replace(re, to).replace(/\s+/g, " ").trim();
-        if (extra && extra !== q) out.push(extra);
-        out.push(to);
-      }
-      re.lastIndex = 0;
-    }
-    return out;
-  }
   function setStatus(t) {
     status = t;
     var meta = document.getElementById("meta");
@@ -118,71 +90,6 @@
     }
     render();
   }
-  function parseHash() {
-    var raw = (location.hash || "#/home").replace(/^#\/?/, "");
-    var q = "";
-    var qi = raw.indexOf("?");
-    if (qi >= 0) {
-      var sp = new URLSearchParams(raw.slice(qi + 1));
-      q = sp.get("q") || "";
-      raw = raw.slice(0, qi);
-    }
-    var parts = raw.split("/").filter(Boolean).map(function (p) {
-      try {
-        return decodeURIComponent(p);
-      } catch (e) {
-        return p;
-      }
-    });
-    var a = parts[0] || "home";
-    if (a === "search") return { name: "search", q: q };
-    if (a === "cart") return { name: "cart" };
-    if (a === "cabinet") return { name: "cabinet" };
-    if (a === "catalog" && parts[2]) return { name: "sub", cat: parts[1], sub: parts[2] };
-    if (a === "catalog" && parts[1]) return { name: "cat", cat: parts[1] };
-    if (a === "catalog") return { name: "catalog" };
-    if (a === "p" && parts[1]) return { name: "family", id: parts[1] };
-    return { name: "home" };
-  }
-
-  function attrToken(v) {
-    if (v === undefined || v === false || v === "") return null;
-    if (v === true) return "да";
-    return String(v);
-  }
-  function availableOptions(items, sel, key) {
-    var others = [];
-    for (var k in sel)
-      if (Object.prototype.hasOwnProperty.call(sel, k) && k !== key && sel[k]) others.push([k, sel[k]]);
-    var seen = {};
-    var out = [];
-    for (var i = 0; i < items.length; i++) {
-      var item = items[i];
-      var ok = true;
-      for (var j = 0; j < others.length; j++) {
-        if (attrToken(item.attrs[others[j][0]]) !== others[j][1]) {
-          ok = false;
-          break;
-        }
-      }
-      if (!ok) continue;
-      var t = attrToken(item.attrs[key]);
-      if (!t || seen[t]) continue;
-      seen[t] = 1;
-      out.push(t);
-    }
-    return out;
-  }
-  function orderOpts(opts, vs) {
-    if (!vs || !vs.length) return opts;
-    return opts.slice().sort(function (a, b) {
-      var ia = vs.indexOf(a);
-      var ib = vs.indexOf(b);
-      if (ia < 0) ia = 999;
-      if (ib < 0) ib = 999;
-      return ia - ib;
-    });
-  }
   function prefixSel(fam, upto) {
     var prefix = {};
     for (var i = 0; i < upto; i++) {
@@ -190,36 +97,6 @@
       if (selected[k]) prefix[k] = selected[k];
     }
     return prefix;
-  }
-  function resolveUnique(items, sel) {
-    var matched = [];
-    for (var i = 0; i < items.length; i++) {
-      var item = items[i];
-      var ok = true;
-      for (var k in sel) {
-        if (!Object.prototype.hasOwnProperty.call(sel, k) || !sel[k]) continue;
-        if (attrToken(item.attrs[k]) !== sel[k]) {
-          ok = false;
-          break;
-        }
-      }
-      if (ok) matched.push(item);
-    }
-    if (matched.length === 1) return matched[0];
-    // Больше одного SKU на полный набор фасетов значит, что выбор ещё не
-    // однозначен (в данных не хватает различающего атрибута) — показывать
-    // произвольный первый SKU как результат было бы враньём пользователю.
-    return null;
-  }
-  function coverOf(hay, queries) {
-    var best = 0, i, toks, n, t;
-    for (i = 0; i < queries.length; i++) {
-      toks = queries[i].split(/\s+/).filter(function (x) { return x.length >= 2; });
-      n = 0;
-      for (t = 0; t < toks.length; t++) if (hay.indexOf(toks[t]) >= 0) n++;
-      if (n > best) best = n;
-    }
-    return best;
   }
   function famSkus(id) {
     return skusByFam[id] || [];
@@ -242,18 +119,6 @@
       '</div></div><span class="muted">→</span></a>'
     );
   }
-  function packCopy(sku) {
-    var om = Number(sku.om) || 1;
-    var pq = Number(sku.pq) || 1;
-    var u = sku.u || "шт";
-    if (om > 1) return "кратно " + om + " " + u;
-    if (pq > 1) return "в упаковке " + pq + " " + u;
-    return "заказ от 1 " + u;
-  }
-  function stepOf(sku) {
-    return Math.max(1, Number(sku && sku.om) || 1);
-  }
-
   function homeHtml() {
     var html =
       "<h1>Точный SKU за минуту</h1><p class=\"muted\">Каталог ООО «Автоэлектроника», Тверь. Оптовая цена — в полном B2B после входа. Остатки не показываем.</p>";
@@ -695,7 +560,7 @@
       })
       .then(function (payload) {
         indexData(payload);
-        view = parseHash();
+        view = parseHash(location.hash);
         render();
       })
       .catch(function (err) {
@@ -734,12 +599,12 @@
     });
   }
   window.addEventListener("popstate", function () {
-    view = parseHash();
+    view = parseHash(location.hash);
     if (view.name !== "family") selected = {};
     render();
   });
   window.addEventListener("hashchange", function () {
-    view = parseHash();
+    view = parseHash(location.hash);
     if (view.name !== "family") selected = {};
     render();
   });
