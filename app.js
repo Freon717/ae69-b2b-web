@@ -206,7 +206,9 @@
       if (ok) matched.push(item);
     }
     if (matched.length === 1) return matched[0];
-    if (matched.length > 1) return matched[0];
+    // Больше одного SKU на полный набор фасетов значит, что выбор ещё не
+    // однозначен (в данных не хватает различающего атрибута) — показывать
+    // произвольный первый SKU как результат было бы враньём пользователю.
     return null;
   }
   function coverOf(hay, queries) {
