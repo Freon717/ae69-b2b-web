@@ -163,3 +163,24 @@ export function parseHash(hash) {
   if (a === "p" && parts[1]) return { name: "family", id: parts[1] };
   return { name: "home" };
 }
+
+// "вилка"/"розетка" — верный отраслевой термин, но "гнездо (мама)"/"штырь
+// (папа)" — привычные слова для тех, кто ежедневно не имеет дела с
+// разъёмами. Показываем оба сразу, значение в data-* остаётся прежним.
+var SIDE_LABELS = {
+  розетка: "гнездо (мама)",
+  вилка: "штырь (папа)",
+  пара: "пара",
+};
+var SIDE_ORDER = ["розетка", "вилка", "пара"];
+
+export function displayLabel(key, value) {
+  if (key === "side" && Object.prototype.hasOwnProperty.call(SIDE_LABELS, value)) {
+    return SIDE_LABELS[value];
+  }
+  return value;
+}
+
+export function displayOrder(key) {
+  return key === "side" ? SIDE_ORDER : null;
+}

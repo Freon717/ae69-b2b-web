@@ -11,6 +11,8 @@ import {
   packCopy,
   stepOf,
   parseHash,
+  displayLabel,
+  displayOrder,
 } from "./lib.js?v=10";
 
 (function () {
@@ -200,7 +202,7 @@ import {
     if (!fam.sels || !fam.sels.length) return;
     for (var i = 0; i < fam.sels.length; i++) {
       var key = fam.sels[i].k;
-      var opts = orderOpts(availableOptions(items, selected, key), fam.sels[i].vs);
+      var opts = orderOpts(availableOptions(items, selected, key), displayOrder(key) || fam.sels[i].vs);
       if (opts.length) selected[key] = opts[0];
     }
   }
@@ -213,7 +215,7 @@ import {
     for (i = 0; i < (fam.sels || []).length; i++) {
       sel = fam.sels[i];
       prefix = prefixSel(fam, i);
-      opts = orderOpts(availableOptions(items, prefix, sel.k), sel.vs);
+      opts = orderOpts(availableOptions(items, prefix, sel.k), displayOrder(sel.k) || sel.vs);
       if (selected[sel.k] && opts.indexOf(selected[sel.k]) < 0) selected[sel.k] = opts[0] || "";
     }
     var sku = fam.sels && fam.sels.length ? resolveUnique(items, selected) : items[0] || null;
@@ -238,7 +240,7 @@ import {
     for (i = 0; i < (fam.sels || []).length; i++) {
       sel = fam.sels[i];
       prefix = prefixSel(fam, i);
-      opts = orderOpts(availableOptions(items, prefix, sel.k), sel.vs);
+      opts = orderOpts(availableOptions(items, prefix, sel.k), displayOrder(sel.k) || sel.vs);
       if (!opts.length) continue;
       html += "<div class=\"muted\" style=\"margin-top:12px\">" + esc(sel.l) + "</div><div class=\"chips\">";
       for (var j = 0; j < opts.length; j++) {
@@ -252,13 +254,14 @@ import {
           '" data-val="' +
           esc(v) +
           '">' +
-          esc(v) +
+          esc(displayLabel(sel.k, v)) +
           "</button>";
       }
       html += "</div>";
     }
     html += '<div class="card">';
     if (sku) {
+      html += '<div class="muted">Описание</div>';
       html += "<p>" + esc(sku.n) + "</p>";
       html += '<div class="muted">Код АЭ ' + esc(sku.c) + (sku.a ? " · " + esc(sku.a) : "") + "</div>";
       html += '<p class="price-note">Оптовая цена — в полном B2B после входа. Этот стенд без прайса.</p>';
@@ -489,7 +492,7 @@ import {
               var items = famSkus(fam.id);
               for (i = idx + 1; i < fam.sels.length; i++) {
                 k = fam.sels[i].k;
-                opts = orderOpts(availableOptions(items, selected, k), fam.sels[i].vs);
+                opts = orderOpts(availableOptions(items, selected, k), displayOrder(k) || fam.sels[i].vs);
                 if (opts.length) selected[k] = opts[0];
               }
             }

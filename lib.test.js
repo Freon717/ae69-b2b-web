@@ -13,6 +13,8 @@ import {
   packCopy,
   stepOf,
   parseHash,
+  displayLabel,
+  displayOrder,
 } from "./lib.js";
 
 describe("esc", () => {
@@ -105,6 +107,19 @@ describe("packCopy / stepOf", () => {
     assert.equal(stepOf({ om: 0 }), 1);
     assert.equal(stepOf(null), 1);
     assert.equal(stepOf({ om: 100 }), 100);
+  });
+});
+
+describe("displayLabel / displayOrder", () => {
+  it("shows the мама/папа gloss for the side attribute only", () => {
+    assert.equal(displayLabel("side", "розетка"), "гнездо (мама)");
+    assert.equal(displayLabel("side", "вилка"), "штырь (папа)");
+    assert.equal(displayLabel("side", "пара"), "пара");
+    assert.equal(displayLabel("section", "0,75 мм²"), "0,75 мм²");
+  });
+  it("fixes the display order for side, leaves other keys alone", () => {
+    assert.deepEqual(displayOrder("side"), ["розетка", "вилка", "пара"]);
+    assert.equal(displayOrder("section"), null);
   });
 });
 
