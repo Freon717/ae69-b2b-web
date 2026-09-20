@@ -6,6 +6,20 @@
 
 Это не справочник сотрудника (`ae69-catalog-web`).
 
+## Откуда берётся `catalog-public.json`
+
+Файл коммитится сюда как готовый артефакт — здесь нет генерирующего скрипта.
+Реальный конвейер живёт в `ae69-b2b-backend`:
+
+```
+ae69-b2b-backend/scripts/import-price.py           — .xls прайс → src/data/catalog.json
+ae69-b2b-backend/src/lib/catalog/apply-rules.ts    — группирует SKU в семейства (sels/values)
+ae69-b2b-backend/scripts/export-public-catalog.mjs — пишет этот JSON (n/t/c/s/sels/attrs/...)
+```
+
+При обновлении прайса нужно прогнать этот конвейер в `ae69-b2b-backend` и
+скопировать результат сюда вручную (см. `ARCHITECTURE_REVIEW.md`).
+
 ## Что проверить на iPhone / APK
 
 1. Главная — поиск и ярлыки, не дубль каталога. Логотип всегда на главную.

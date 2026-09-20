@@ -22,7 +22,12 @@ import {
   var BASE = "./";
   if (scriptEl && scriptEl.src) BASE = scriptEl.src.replace(/app\.js(\?.*)?$/, "");
 
-  var CATALOG_URL = BASE + "catalog-public.json?v=12";
+  // Reuse the entry script's own cache-bust version instead of a second
+  // hardcoded literal here - app.js and catalog-public.json are always
+  // bumped together, so drift between them was a real risk (see
+  // ARCHITECTURE_REVIEW.md 3.3).
+  var SCRIPT_VERSION = (scriptEl && scriptEl.src.match(/[?&]v=([^&]+)/)) || [];
+  var CATALOG_URL = BASE + "catalog-public.json?v=" + (SCRIPT_VERSION[1] || "0");
   var data = { cats: [], families: [], skus: [] };
   var famById = {};
   var skuById = {};
