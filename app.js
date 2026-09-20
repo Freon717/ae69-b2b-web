@@ -13,7 +13,7 @@ import {
   parseHash,
   displayLabel,
   displayOrder,
-} from "./lib.js?v=10";
+} from "./lib.js?v=11";
 
 (function () {
   "use strict";
@@ -22,7 +22,7 @@ import {
   var BASE = "./";
   if (scriptEl && scriptEl.src) BASE = scriptEl.src.replace(/app\.js(\?.*)?$/, "");
 
-  var CATALOG_URL = BASE + "catalog-public.json?v=10";
+  var CATALOG_URL = BASE + "catalog-public.json?v=11";
   var data = { cats: [], families: [], skus: [] };
   var famById = {};
   var skuById = {};
@@ -234,6 +234,8 @@ import {
     html +=
       '<button class="heart js-fav" type="button" data-id="' +
       esc(fam.id) +
+      '" aria-pressed="' +
+      (isFav(fam.id) ? "true" : "false") +
       '">' +
       (isFav(fam.id) ? "♥ В избранном" : "♡ В избранное") +
       "</button>";
