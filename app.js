@@ -13,7 +13,7 @@ import {
   parseHash,
   displayLabel,
   displayOrder,
-} from "./lib.js?v=11";
+} from "./lib.js?v=12";
 
 (function () {
   "use strict";
@@ -22,7 +22,7 @@ import {
   var BASE = "./";
   if (scriptEl && scriptEl.src) BASE = scriptEl.src.replace(/app\.js(\?.*)?$/, "");
 
-  var CATALOG_URL = BASE + "catalog-public.json?v=11";
+  var CATALOG_URL = BASE + "catalog-public.json?v=12";
   var data = { cats: [], families: [], skus: [] };
   var famById = {};
   var skuById = {};
